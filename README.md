@@ -34,4 +34,4 @@ gunicorn --reload main:__hug_wsgi__
 
 - `/phab q open` : Get open tasks
 - `/phab q me open` : Get your open tasks
-- `/phab q me open resolved` : Get your open or resolved tasks
+- `/phab query mine resolved` : Get your resolved tasks
