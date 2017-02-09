@@ -17,9 +17,6 @@ def webhook_slash_bot(token: hug.types.text, team_id: hug.types.text, team_domai
         response.status = HTTP_BAD_REQUEST
         return {"error": "Wrong slash token !"}
 
-    func_name = 'slash_{}'.format(command[1:])
-    func = globals()[func_name]
-
-    text, response_type = func(user_name, text)
+    text, response_type = slash_main(user_name, text)
 
     return {"text": text, "response_type": response_type}

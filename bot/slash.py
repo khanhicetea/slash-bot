@@ -2,6 +2,8 @@ import os
 import json
 from datetime import datetime
 from .phabricator import Phabricator
+import requests
+import random
 
 
 EPHEMERAL = "ephemeral"
@@ -17,6 +19,11 @@ TASK_PRIORITY_EMOJI = {
     'sky': ':raising_hand:'
 }
 TASK_STATUES = ['open', 'resolved', 'invalid', 'wontfix', 'spite']
+DEPLOY_USER = os.environ.get('DEPLOY_USER')
+DEPLOY_PASSWORD = os.environ.get('DEPLOY_PASSWORD')
+DEPLOY_URL = os.environ.get('DEPLOY_URL')
+DEPLOY_PROJECT_ID = os.environ.get('DEPLOY_PROJECT_ID')
+DEPLOY_TEMPLATE_IDS = os.environ.get('DEPLOY_TEMPLATE_IDS')
 phabricator = Phabricator(PHAB_URL, PHAB_TOKEN)
 
 def format_time(timestamp):
@@ -63,10 +70,38 @@ def get_tasks(args):
     
     return tasks
 
-def slash_phab(user_name, text):
+def slash_main(user_name, text):
     cmd, *params = text.split(' ')
 
-    if cmd in ['q', 'query', 'search']:
+    if cmd in ['deploy']:
+        template_id = 0
+        for temp in DEPLOY_TEMPLATE_IDS.split(','):
+            parts = temp.split(':')
+            if parts[0] == params[0]:
+                template_id = int(parts[1])
+        if template_id:
+            s = requests.Session()
+            r = s.post('{}/api/auth/login'.format(DEPLOY_URL), json={
+                "auth": DEPLOY_USER,
+                "password": DEPLOY_PASSWORD
+            })
+            if r.status_code == 204:
+                r = s.post('{}/api/project/{}/tasks'.format(DEPLOY_URL, DEPLOY_PROJECT_ID), json={
+                    "template_id": template_id,
+                    "debug": False,
+                    "dry_run": False
+                })
+                if r.status_code == 201:
+                    return "Roger that !!! :ok_hand: I'm going to deploy `{}` ... Get a :beers: plz !".format(params[0]), IN_CHANNEL
+        return "Oops, you're drunk, man ! Something went wrong  ... :scream_cat:", IN_CHANNEL
+    elif cmd in ['random', 'say']:
+        r = requests.get('http://quotes.stormconsultancy.co.uk/random.json')
+        result = r.json()
+        return "`{}` - {}".format(result['quote'], result['author']), IN_CHANNEL
+    elif cmd in ['vietlott']:
+        numbers = ['`{}`'.format(x if x > 9 else '0' + str(x)) for x in random.sample(range(1, 45), 6)]
+        return ":joy: Ra đê sớm nha pồ : {}".format(' '.join(numbers)), IN_CHANNEL
+    elif cmd in ['q', 'query', 'search']:
         args = {}
         if 'me' in params or 'mine' in params:
             current_user = get_user_by_username(user_name)
